@@ -1,9 +1,12 @@
+import os
 import sys
 import re
 import requests
 
 import token_cont
 
+from time import sleep
+from tqdm import tqdm
 from pprint import pprint
 
 
@@ -151,6 +154,7 @@ class BackupPhoto:
 
         number_photos = self._number_photos(id_albums)
         url_photos = self._url_photos(number_photos)
+        self._loading(url_photos)
 
     def _number_photos(self, id_albums: list):
         """
@@ -201,6 +205,30 @@ class BackupPhoto:
                 self._error_api(response)
         return id_url_photos
 
+    def _loading(self, url_photos: dict):
+        """
+        Загружает фотографии по словарю с парами id и url в папку 'photo' текущей директории.
+
+        :param photos_dict: Словарь с парами id и url фотографий.
+        """
+        folder_name = 'photo'
+        folder_path = os.path.join(os.getcwd(), folder_name)  # Получаем полный путь к папке
+
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        for id_photo, url in tqdm(url_photos.items(), desc='Загрузка фотографий', unit='фото'):
+            response = self._request_api(url_photo=url)
+            if response:
+
+                filename = os.path.join(folder_path, f'photo_{id_photo}.jpg')
+
+                with open(filename, 'wb') as f:
+                    f.write(response.content)
+                tqdm.write(f"Фотография с ID {id_photo} успешно загружена.")
+            else:
+                tqdm.write(f"Произошла ошибка при загрузке фотографии с ID {id_photo}.")
+                sleep(5)
 
 if __name__ == '__main__':
     name_profile = token_cont.id_user
