@@ -7,7 +7,7 @@ import token_cont
 from pprint import pprint
 
 
-class Backup_photo:
+class BackupPhoto:
     url = 'https://api.vk.com/method/'
 
     def __init__(self, name_profile: str, token=None, version='5.199'):
@@ -33,7 +33,7 @@ class Backup_photo:
                f'&display=page&redirect_uri=https://example.com/callback&scope=offline,photos&'
                f'response_type=token&v=5.131&state=123456')
 
-        print(f'Передийте по ссылке\n{url}')
+        print(f'Передайте по ссылке\n{url}')
         token_url = input('Вставьте URL страницы на которую вас перебросило \n---> ')
 
         pattern = r"access_token=([a-zA-Z0-9._-]+)"
@@ -47,12 +47,28 @@ class Backup_photo:
 
         return access_token
 
-    def _request_api(self, method: str, params: dict, url_photo: str = None):
-        if url_photo is None:
-            response = requests.get(self.url + method,
-                                    params={**self._common_params(), **params}, timeout=0.5)
-        elif url_photo is not None:
-            response = requests.get(url_photo, timeout=0.5)
+    def _request_api(self, method: str = None, params: dict = None, url_photo: str = None):
+        """
+        Выполняет HTTP-запрос к API.
+
+        :param method: Метод API для обычного запроса.
+        :param params: Параметры запроса.
+        :param url_photo: URL для загрузки фотографии (если указан, используется GET запрос).
+        :return: Объект Response или None в случае ошибки.
+        """
+        try:
+            if url_photo is None:
+                response = requests.get(self.url + method,
+                                        params={**self._common_params(), **params}, timeout=0.5)
+            else:
+                response = requests.get(url_photo, timeout=0.5)
+
+            response.raise_for_status()  # Проверка на ошибки HTTP
+
+        except requests.exceptions.RequestException as e:
+            print(f"Ошибка при выполнении запроса: {e}")
+            return None
+
         return response
 
     def _common_params(self):
@@ -131,7 +147,7 @@ class Backup_photo:
         if not answer_id:
             id_albums.append('-6')
         else:
-            id_albums = [album for album in answer_id.split(',')]
+            id_albums = list(album for album in answer_id.split(','))
 
         number_photos = self._number_photos(id_albums)
         url_photos = self._url_photos(number_photos)
@@ -166,21 +182,21 @@ class Backup_photo:
         """
         Создает словарь, содержащий ID и URL фотографий, выбранных ранее из альбомов
         :param number_photos: словарь из ID альбома и требуемое количества фото для загрузки
-        :return: Словарь из ID фото и URL сдля скачивания
+        :return: Словарь из ID фото и URL для скачивания
         """
         id_url_photos = {}
-        for id_albom, quantity in number_photos.items():
+        for id_album, quantity in number_photos.items():
 
             params = {'owner_id': self.users_id,
-                      'album_id': id_albom,
+                      'album_id': id_album,
                       }
             response = self._request_api(method='photos.get', params=params)
             if 'error' not in response.json().keys():
                 photo_dict = response.json()['response']['items'][:quantity]
                 for el in photo_dict:
-                    id_phto = el['id']
+                    id_photo = el['id']
                     url = el['sizes'][-1]['url']
-                    id_url_photos[str(id_phto)] = url
+                    id_url_photos[str(id_photo)] = url
             else:
                 self._error_api(response)
         return id_url_photos
@@ -188,7 +204,7 @@ class Backup_photo:
 
 if __name__ == '__main__':
     name_profile = token_cont.id_user
-    t = Backup_photo(name_profile, token_cont.TOKEN_VK)
+    t = BackupPhoto(name_profile, token_cont.TOKEN_VK)
     print(t.users_info())
     foto = t.getting_list_albums()
     print(foto)
