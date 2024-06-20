@@ -47,6 +47,14 @@ class Backup_photo:
 
         return access_token
 
+    def _request_api(self, method: str, params: dict, url_photo: str = None):
+        if url_photo is None:
+            response = requests.get(self.url + method,
+                                    params={**self._common_params(), **params}, timeout=0.5)
+        elif url_photo is not None:
+            response = requests.get(url_photo, timeout=0.5)
+        return response
+
     def _common_params(self):
         params = {'access_token': self.access_token,
                   'v': self.version
@@ -63,14 +71,17 @@ class Backup_photo:
         if list(response.json().keys())[0] != 'response':
             if response.json()['error']['error_code'] == 5:
                 output_ = "Ошибка авторизации ваш токен не действителен"
+                print(output_)
+                sys.exit()
             else:
-                output_ = f"Произошла ошибка  код ошибки {response.json()['error']['error_code']}." \
+                output_ = f"Произошла ошибка  код ошибки " \
+                          f"{response.json()['error']['error_code']}." \
                           f"\nСмотрите в домунтациик VK API\nhttps://dev.vk.com/ru/reference/errors"
+                print(output_)
         else:
             output_ = f'Пользователя с ником {self.id} не найден'
             print(output_)
             sys.exit()
-        return output_
 
     def users_info(self):
         params = {'user_ids': self.id}
@@ -83,10 +94,9 @@ class Backup_photo:
             output_ = f"По указанному ID был найден пользователь " \
                       f"{response.json()['response'][0]['first_name']} " \
                       f"{response.json()['response'][0]['last_name']}"
+            return output_
         else:
-            output_ = self._error_api(response)
-
-        return output_
+            self._error_api(response)
 
     def getting_list_albums(self):
         params = {'owner_id': self.users_id,
@@ -102,21 +112,18 @@ class Backup_photo:
                 id_albums = album['id']
                 size = album['size']
                 title = album['title']
-                output_ += f'\nID:{id_albums}, количество фотографий {size}, название: {title}'
-                self.id_albums_size[str(id_albums)] = int(size)
+                if size > 0:
+                    output_ += f'\nID:{id_albums}, количество фотографий {size}, название: {title}'
+                    self.id_albums_size[str(id_albums)] = int(size)
+            return output_
         else:
-            output_ = self._error_api(response)
-
-        return output_
+            self._error_api(response)
 
     def upload_photo(self):
 
         print('\nДля скачивания фото через запятую укажите ID альбомов.\n'
               'Если ничего не указывать то поиск фотографий будет '
               '\nпроходить в альбоме  в "фотографии со страницы пользователя" ')
-        params = {'owner_id': self.users_id,
-                  'album_id': 'profile',
-                  }
 
         id_albums = []
 
@@ -127,10 +134,11 @@ class Backup_photo:
             id_albums = [album for album in answer_id.split(',')]
 
         number_photos = self._number_photos(id_albums)
+        url_photos = self._url_photos(number_photos)
 
     def _number_photos(self, id_albums: list):
         """
-        Обрабатывает ввод количество фото требуемое для скачивания
+        Обрабатывает ввод количества фотографий, требуемых для скачивания
         :param id_albums:
         :return: dict
         """
@@ -153,6 +161,29 @@ class Backup_photo:
 
             number_photos[id_album] = quantity
         return number_photos
+
+    def _url_photos(self, number_photos: dict):
+        """
+        Создает словарь, содержащий ID и URL фотографий, выбранных ранее из альбомов
+        :param number_photos: словарь из ID альбома и требуемое количества фото для загрузки
+        :return: Словарь из ID фото и URL сдля скачивания
+        """
+        id_url_photos = {}
+        for id_albom, quantity in number_photos.items():
+
+            params = {'owner_id': self.users_id,
+                      'album_id': id_albom,
+                      }
+            response = self._request_api(method='photos.get', params=params)
+            if 'error' not in response.json().keys():
+                photo_dict = response.json()['response']['items'][:quantity]
+                for el in photo_dict:
+                    id_phto = el['id']
+                    url = el['sizes'][-1]['url']
+                    id_url_photos[str(id_phto)] = url
+            else:
+                self._error_api(response)
+        return id_url_photos
 
 
 if __name__ == '__main__':
