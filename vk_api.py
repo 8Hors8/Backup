@@ -1,19 +1,86 @@
+"""
+Модуль VkApi для работы с API социальной сети ВКонтакте.
+
+Класс VkApi предоставляет методы для авторизации пользователя, получения информации о профиле,
+работы с фотоальбомами и загрузки фотографий.
+
+Пример использования:
+    api = VkApi('Имя_пользователя', token='Ваш_токен')
+    api.users_info()
+    api.getting_list_albums()
+    api.upload_photo()
+"""
 import os
 import sys
 import re
+from time import sleep
 import requests
 
-import token_cont
-
-from time import sleep
 from tqdm import tqdm
-from pprint import pprint
 
 
-class BackupPhoto:
+class VkApi:
+    """
+    Класс VkApi предоставляет интерфейс для работы с API ВКонтакте.
+
+    Attributes:
+        url (str): Базовый URL для запросов к API ВКонтакте.
+        id (str): Имя пользователя или ID профиля.
+        access_token (str): Access token для доступа к API ВКонтакте.
+        users_id (int): ID пользователя ВКонтакте.
+        id_albums_size (dict): Словарь с размерами альбомов пользователя.
+        version (str): Версия API ВКонтакте.
+
+    Methods:
+        __init__(name_profile: str, token=None, version='5.199'):
+            Инициализирует объект VkApi.
+
+        _request_id_application():
+            Запрашивает ID приложения для получения access token.
+
+        _receiving_access_token(client_id: str):
+            Получает access token по URL-адресу.
+
+        _request_api(method: str = None, params: dict = None, url_photo: str = None):
+            Выполняет HTTP-запрос к API ВКонтакте.
+
+        _common_params():
+            Возвращает общие параметры для запросов к API ВКонтакте.
+
+        _error_api(response):
+            Обрабатывает ошибки ответа от API ВКонтакте.
+
+        users_info():
+            Получает информацию о пользователе.
+
+        getting_list_albums():
+            Получает список альбомов пользователя.
+
+        upload_photo():
+            Загружает фотографии из альбомов пользователя.
+
+        _number_photos(id_albums: list):
+            Обрабатывает ввод количества фотографий для скачивания.
+
+        _url_photos(number_photos: dict):
+            Создает словарь с URL фотографий для скачивания.
+
+        _loading(url_photos: dict):
+            Загружает фотографии по URL в папку 'photo'.
+    """
     url = 'https://api.vk.com/method/'
 
     def __init__(self, name_profile: str, token=None, version='5.199'):
+        """
+
+        Инициализирует объект VkApi.
+
+        Args:
+            name_profile (str): Имя пользователя или ID профиля.
+            token (str, optional): Access token для доступа к API ВКонтакте.
+             Если не указан, запрашивается автоматически.
+            version (str, optional): Версия API ВКонтакте. По умолчанию '5.199'.
+        """
 
         self.id = name_profile
         self.access_token = token if token is not None else self._request_id_application()
@@ -23,6 +90,11 @@ class BackupPhoto:
         self.version = version
 
     def _request_id_application(self):
+        """
+        Запрашивает ID приложения для получения access token.
+
+        Returns:str: Access token для доступа к API ВКонтакте.
+        """
 
         answer = input('Укажите ID приложения ---> ')
 
@@ -31,6 +103,12 @@ class BackupPhoto:
         return token
 
     def _receiving_access_token(self, client_id: str):
+        """
+        Получает access token по URL-адресу.
+
+        Args: client_id (str): ID приложения ВКонтакте.
+        Returns: str: Access token для доступа к API ВКонтакте.
+        """
 
         url = (f'https://oauth.vk.com/authorize?client_id={client_id}'
                f'&display=page&redirect_uri=https://example.com/callback&scope=offline,photos&'
@@ -75,6 +153,11 @@ class BackupPhoto:
         return response
 
     def _common_params(self):
+        """
+        Возвращает общие параметры для запросов к API ВКонтакте.
+
+        Returns:dict: Параметры запроса (access_token и version).
+        """
         params = {'access_token': self.access_token,
                   'v': self.version
                   }
@@ -103,6 +186,11 @@ class BackupPhoto:
             sys.exit()
 
     def users_info(self):
+        """
+        Получает информацию о пользователе.
+
+        Returns:str: Сообщение о найденном пользователе.
+        """
         params = {'user_ids': self.id}
 
         response = requests.get(self.url + 'users.get',
@@ -114,10 +202,15 @@ class BackupPhoto:
                       f"{response.json()['response'][0]['first_name']} " \
                       f"{response.json()['response'][0]['last_name']}"
             return output_
-        else:
-            self._error_api(response)
+        self._error_api(response)
+        return None
 
     def getting_list_albums(self):
+        """
+        Получает список альбомов пользователя и их размеры.
+
+        Returns:str: Сообщение о количестве и названиях альбомов.
+        """
         params = {'owner_id': self.users_id,
                   'need_system': '1'
                   }
@@ -135,11 +228,14 @@ class BackupPhoto:
                     output_ += f'\nID:{id_albums}, количество фотографий {size}, название: {title}'
                     self.id_albums_size[str(id_albums)] = int(size)
             return output_
-        else:
-            self._error_api(response)
+        self._error_api(response)
+        return None
 
     def upload_photo(self):
+        """
+        Загружает фотографии из альбомов пользователя в папку 'photo'.
 
+        """
         print('\nДля скачивания фото через запятую укажите ID альбомов.\n'
               'Если ничего не указывать то поиск фотографий будет '
               '\nпроходить в альбоме  в "фотографии со страницы пользователя" ')
@@ -209,7 +305,7 @@ class BackupPhoto:
         """
         Загружает фотографии по словарю с парами id и url в папку 'photo' текущей директории.
 
-        :param photos_dict: Словарь с парами id и url фотографий.
+        :param url_photos: Словарь с парами id и url фотографий.
         """
         folder_name = 'photo'
         folder_path = os.path.join(os.getcwd(), folder_name)  # Получаем полный путь к папке
@@ -230,10 +326,6 @@ class BackupPhoto:
                 tqdm.write(f"Произошла ошибка при загрузке фотографии с ID {id_photo}.")
                 sleep(5)
 
+
 if __name__ == '__main__':
-    name_profile = token_cont.id_user
-    t = BackupPhoto(name_profile, token_cont.TOKEN_VK)
-    print(t.users_info())
-    foto = t.getting_list_albums()
-    print(foto)
-    t.upload_photo()
+    pass
