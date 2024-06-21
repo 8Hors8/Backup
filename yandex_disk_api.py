@@ -3,6 +3,7 @@ import sys
 import requests
 import logging
 import os
+from tqdm import tqdm
 
 import token_cont
 
@@ -32,7 +33,7 @@ class YandexDiskApi:
         url = "https://cloud-api.yandex.net/v1/disk/resources"
         name_folder = self.name_folder if self.name_folder is not None else self._request_folder_name()
         params = {
-            "path": f'{name_folder}/{self.name_profile}'
+            "path": f'{name_folder}'
         }
         response = requests.put(url, headers=self._common_headers(), params=params, timeout=5)
 
@@ -47,15 +48,28 @@ class YandexDiskApi:
         name_files_list = self._list_files_in_directory()
         url = 'https://cloud-api.yandex.net/v1/disk/resources/upload'
         self.name_folder if self.name_folder is not None else self.creating_folder()
+
         if name_files_list:
-            for name_img in name_files_list:
+            for name_img in tqdm(name_files_list, desc="Загрузка фотографий", unit="фото"):
                 params = {
-                    "path": f'{self.name_folder}/{self.name_profile}/{name_img}'
+                    "path": f'{self.name_folder}/{name_img}'
                 }
-                response = requests.get(url, headers=self._common_headers(), params=params, timeout=5)
+                response = requests.get(url, headers=self._common_headers(),
+                                        params=params, timeout=5)
+
                 url_save = response.json()['href']
+
                 with open(f'photo/{name_img}', 'rb') as image:
-                    response = requests.put(url_save, files={'file': image})
+                    response_save = None
+                    while response_save is None or response_save.status_code != 201:
+                        response_save = requests.put(url_save, files={'file': image})
+
+                        if response_save.status_code == 201:
+                            print(f"Фото '{name_img}' успешно загружено на Яндекс.Диск.")
+                            image.close()
+                            self._delete_uploaded_photos(name_img)
+                        else:
+                            print(f"Ошибка при загрузке фото '{name_img}': {response_save.text}")
 
         else:
             print("Папка 'photo' пуста")
@@ -78,6 +92,24 @@ class YandexDiskApi:
         except OSError as e:
             print(f"Ошибка при сканировании папки '{photo_dir}': {e}")
             return []
+
+    def _delete_uploaded_photos(self, name_img: str):
+        """
+        Удаляет из папки 'photo' те файлы, которые были успешно загружены на Яндекс.Диск.
+        """
+        current_dir = os.path.dirname(__file__)
+        photo_dir = os.path.join(current_dir, 'photo')
+        try:
+            if not os.path.isdir(photo_dir):
+                raise ValueError(f"Папка '{photo_dir}' не существует или не является директорией.")
+
+            file_path = os.path.join(photo_dir, name_img)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                print(f"Файл '{name_img}' удалён из папки 'photo'.")
+
+        except OSError as e:
+            print(f"Ошибка при удалении файлов из папки '{photo_dir}': {e}")
 
 
 if __name__ == '__main__':

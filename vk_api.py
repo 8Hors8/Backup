@@ -70,20 +70,20 @@ class VkApi:
     """
     url = 'https://api.vk.com/method/'
 
-    def __init__(self, name_profile: str, token=None, version='5.199'):
+    def __init__(self, name_profile: str, token_vk: str = None, version='5.199'):
         """
 
         Инициализирует объект VkApi.
 
         Args:
             name_profile (str): Имя пользователя или ID профиля.
-            token (str, optional): Access token для доступа к API ВКонтакте.
+            token_vk (str, optional): Access token для доступа к API ВКонтакте.
              Если не указан, запрашивается автоматически.
             version (str, optional): Версия API ВКонтакте. По умолчанию '5.199'.
         """
 
         self.id = name_profile
-        self.access_token = token if token is not None else self._request_id_application()
+        self.access_token = token_vk if token_vk is not None else self._request_id_application()
         self.users_id = None
         self.id_albums_size = {}
 
