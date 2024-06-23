@@ -1,16 +1,17 @@
 import sys
 
-import requests
+
 import logging
 import os
 from tqdm import tqdm
+import requests
 
-import token_cont
+
 
 
 class YandexDiskApi:
 
-    def __init__(self, token_yand: str, name_profile: str):
+    def __init__(self, token_yand: str):
         self.token = token_yand
         self.name_folder = None
         self.name_profile = name_profile
@@ -31,7 +32,8 @@ class YandexDiskApi:
               "или нажмите Enter для использования имени по умолчанию 'image'.")
 
         url = "https://cloud-api.yandex.net/v1/disk/resources"
-        name_folder = self.name_folder if self.name_folder is not None else self._request_folder_name()
+        name_folder = self.name_folder if self.name_folder is not None \
+            else self._request_folder_name()
         params = {
             "path": f'{name_folder}'
         }
@@ -55,7 +57,7 @@ class YandexDiskApi:
                     "path": f'{self.name_folder}/{name_img}'
                 }
                 response = requests.get(url, headers=self._common_headers(),
-                                        params=params, timeout=5)
+                                        params=params, timeout=2)
 
                 url_save = response.json()['href']
 
@@ -113,6 +115,4 @@ class YandexDiskApi:
 
 
 if __name__ == '__main__':
-    t = YandexDiskApi(token_cont.TOKEN_YND, token_cont.id_user)
-    # t.creating_folder()
-    t.saving_photo_disk()
+    pass

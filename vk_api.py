@@ -201,9 +201,10 @@ class VkApi:
             output_ = f"По указанному ID был найден пользователь " \
                       f"{response.json()['response'][0]['first_name']} " \
                       f"{response.json()['response'][0]['last_name']}"
-            return output_
-        self._error_api(response)
-        return None
+            print(output_)
+        else:
+            self._error_api(response)
+
 
     def getting_list_albums(self):
         """
@@ -227,9 +228,10 @@ class VkApi:
                 if size > 0:
                     output_ += f'\nID:{id_albums}, количество фотографий {size}, название: {title}'
                     self.id_albums_size[str(id_albums)] = int(size)
-            return output_
-        self._error_api(response)
-        return None
+            print(output_)
+        else:
+            self._error_api(response)
+
 
     def upload_photo(self):
         """
@@ -313,7 +315,7 @@ class VkApi:
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        for id_photo, url in tqdm(url_photos.items(), desc='Загрузка фотографий', unit='фото'):
+        for id_photo, url in tqdm(url_photos.items(), desc='Скачивание фотографий', unit='фото'):
             response = self._request_api(url_photo=url)
             if response:
 
