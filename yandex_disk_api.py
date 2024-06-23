@@ -19,11 +19,11 @@
 """
 
 import sys
-
 import logging
 import os
-from tqdm import tqdm
 import requests
+
+from tqdm import tqdm
 
 
 class YandexDiskApi:
