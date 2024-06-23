@@ -1,5 +1,24 @@
-import sys
+"""
+Скрипт для работы с API Яндекс.Диска для загрузки фотографий.
 
+Этот скрипт использует API Яндекс.Диска для создания папки на диске,
+ загрузки фотографий из локальной папки 'photo' на Яндекс.Диск,
+а также удаления загруженных файлов из локальной папки после успешной
+загрузки на Яндекс.Диск.
+
+Для работы скрипта необходимо передать токен OAuth Яндекс.Диска
+ в качестве аргумента при создании объекта класса YandexDiskApi.
+
+Пример использования:
+    python script.py <token_yand>
+
+Где <token_yand> - токен OAuth для доступа к API Яндекс.Диска.
+
+Автор: [Ваше имя или ник]
+Дата создания: [Дата создания скрипта]
+"""
+
+import sys
 
 import logging
 import os
@@ -7,27 +26,59 @@ from tqdm import tqdm
 import requests
 
 
-
-
 class YandexDiskApi:
+    """
+    Класс для работы с API Яндекс.Диска для загрузки фотографий.
+    Attributes:
+        token (str): Токен OAuth для доступа к API Яндекс.Диска.
+        name_folder (str or None): Название папки на Яндекс.Диске,
+         куда будут загружаться фотографии.
+    """
 
     def __init__(self, token_yand: str):
+        """
+        Инициализация объекта класса YandexDiskApi.
+
+        Args:
+            token_yand (str): Токен OAuth для доступа к API Яндекс.Диска.
+        """
         self.token = token_yand
         self.name_folder = None
-        self.name_profile = name_profile
 
     def _common_headers(self):
+        """
+        Формирует общие заголовки для запросов к API Яндекс.Диска.
+
+        Returns:
+            dict: Словарь с заголовками HTTP запроса.
+        """
+
         headers = {
             "Authorization": f'OAuth {self.token}'
         }
         return headers
 
     def _request_folder_name(self):
+        """
+        Запрашивает у пользователя название папки для создания на Яндекс.Диске.
+
+        Returns:
+            str: Название папки, введенное пользователем или значение по умолчанию "image".
+        """
         reply = input('Ведите название папки ---> ')
         self.name_folder = reply if reply else "image"
         return self.name_folder
 
     def creating_folder(self):
+        """
+        Создает папку на Яндекс.Диске с указанным именем или использует имя по умолчанию.
+
+        Raises:
+            ValueError: Если возникает ошибка создания папки.
+
+        Notes:
+            Использует API endpoint для создания ресурсов на Яндекс.Диске.
+        """
         print("Введите имя папки, которую вы хотите создать, "
               "или нажмите Enter для использования имени по умолчанию 'image'.")
 
@@ -42,11 +93,22 @@ class YandexDiskApi:
         if response.status_code == 201:
             logging.info(f"Папка '{self.name_folder}' успешно создана.")
         elif response.status_code == 409:
-            logging.warning(f"Папка '{self.name_folder}/{self.name_profile}' уже существует.")
+            logging.warning(f"Папка '{self.name_folder}' уже существует.")
         else:
             logging.warning(f"Неожиданный код состояния: {response.status_code}")
 
     def saving_photo_disk(self):
+        """
+        Загружает фотографии из локальной папки 'photo' на Яндекс.Диск в указанную папку.
+        Raises:
+            OSError: Если возникает ошибка доступа к локальной папке 'photo'.
+            requests.exceptions.RequestException: Если возникает ошибка HTTP запроса
+             к API Яндекс.Диска.
+
+        Notes:
+            Использует API endpoint для загрузки файлов на Яндекс.Диск.
+        """
+
         name_files_list = self._list_files_in_directory()
         url = 'https://cloud-api.yandex.net/v1/disk/resources/upload'
         self.name_folder if self.name_folder is not None else self.creating_folder()
@@ -79,8 +141,13 @@ class YandexDiskApi:
 
     def _list_files_in_directory(self):
         """
-        Сканирует папку 'photo' на наличие файлов.
-        :return: Возращает список из имени файлов
+        Сканирует локальную папку 'photo' на наличие файлов.
+
+        Returns:
+            list: Список имен файлов в папке 'photo'.
+
+        Raises:
+            ValueError: Если папка 'photo' не существует или не является директорией.
         """
 
         current_dir = os.path.dirname(__file__)
@@ -97,7 +164,14 @@ class YandexDiskApi:
 
     def _delete_uploaded_photos(self, name_img: str):
         """
-        Удаляет из папки 'photo' те файлы, которые были успешно загружены на Яндекс.Диск.
+        Удаляет из локальной папки 'photo' файлы, которые были успешно загружены на Яндекс.Диск.
+
+        Args:
+            name_img (str): Имя файла для удаления из папки 'photo'.
+
+        Raises:
+            ValueError: Если папка 'photo' не существует или не является директорией.
+            OSError: Если возникает ошибка доступа к локальной папке 'photo'.
         """
         current_dir = os.path.dirname(__file__)
         photo_dir = os.path.join(current_dir, 'photo')
