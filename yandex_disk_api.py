@@ -10,12 +10,12 @@
  в качестве аргумента при создании объекта класса YandexDiskApi.
 
 Пример использования:
-    python script.py <token_yand>
+    api = YandexDiskApi(token_yand='Ваш_токен')
+    api.creating_folder()
+    api.saving_photo_disk()
 
 Где <token_yand> - токен OAuth для доступа к API Яндекс.Диска.
 
-Автор: [Ваше имя или ник]
-Дата создания: [Дата создания скрипта]
 """
 
 import sys
